@@ -1,0 +1,122 @@
+/*
+ * Copyright (C) 2014  Secretaria de Orçamento Federal
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath group: 'org.hibernate.build.gradle', name: 'gradle-maven-publish-auth', version: '2.0.1'
+    }
+}
+
+apply plugin: 'groovy'
+apply plugin: 'maven-publish'
+apply plugin: 'maven-publish-auth'
+
+version = '1.0.0-SNAPSHOT'
+group = 'br.gov.siop.persistence'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+defaultTasks 'build'
+
+repositories {
+    mavenLocal()
+
+    maven {
+        name 'SIOP Third-party Releases'
+        url 'http://drep01:8080/nexus/content/groups/third-party-repos/'
+    }
+
+    maven {
+        name 'Allanbank Releases'
+        url  'http://www.allanbank.com/repo/'
+    }
+
+    mavenCentral()
+}
+
+dependencies {
+    // Groovy runtime
+    compile group: 'org.codehaus.groovy', name: 'groovy', version: '2.3.6', classifier: 'indy'
+
+    compile group: 'com.typesafe', name: 'config', version: '1.2.1'
+    compile group: 'com.allanbank', name: 'mongodb-async-driver', version: '2.0.1'
+
+    // Test dependencies
+    testCompile group: 'org.spockframework', name: 'spock-core', version: '0.7-groovy-2.0'
+}
+
+publishing {
+
+    repositories {
+        maven {
+            if (project.version.endsWith( "SNAPSHOT" )) {
+                name 'SIOP-Snapshots'
+                url 'http://drep01:8080/nexus/content/repositories/snapshots/'
+            } else {
+                name 'SIOP-Releases'
+                url 'http://drep01:8080/nexus/content/repositories/releases/'
+            }
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            from components.java
+
+            pom.withXml {
+                asNode().appendNode('description',
+                        'A set of tools for connection management with persistence sources.')
+            }
+
+            artifact sourceJar {
+                classifier 'source'
+            }
+        }
+    }
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allSource
+}
+
+compileGroovy {
+    groovyOptions.metaClass.optionMap = {[
+            indy: true,
+            encoding: "UTF-8"
+    ]}
+}
+
+compileTestGroovy {
+    groovyOptions.metaClass.optionMap = {[
+            indy: true,
+            encoding: "UTF-8"
+    ]}
+}
+
+plugins.withType(IdeaPlugin) {
+    idea {
+        project {
+            jdkName = '1.8'
+            languageLevel = '1.8'
+        }
+    }
+}
